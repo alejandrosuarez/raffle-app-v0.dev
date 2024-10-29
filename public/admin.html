@@ -33,7 +33,7 @@
   </div>
 
   <script>
-    const supabase = supabase.createClient('YOUR_SUPABASE_URL', 'YOUR_SUPABASE_ANON_KEY');
+    const supabase = supabase.createClient(window.location.origin + '/api/supabase-url', window.location.origin + '/api/supabase-anon-key');
     const loginBtn = document.getElementById('login');
     const adminPanel = document.getElementById('adminPanel');
     const table = document.getElementById('numbersTable').getElementsByTagName('tbody')[0];
