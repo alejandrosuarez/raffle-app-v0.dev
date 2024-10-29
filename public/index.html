@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Raffle App</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; }
+    .number { padding: 10px; text-align: center; cursor: pointer; }
+    .available { background-color: #90EE90; }
+    .reserved { background-color: #FFD700; }
+    .sold { background-color: #FF6347; }
+    .selected { border: 2px solid blue; }
+    #form { margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <div id="grid" class="grid"></div>
+  <div id="form" style="display:none;">
+    <input type="text" id="name" placeholder="Name" required>
+    <input type="email" id="email" placeholder="Email" required>
+    <input type="tel" id="phone" placeholder="Phone" required>
+    <button id="reserve">Reserve</button>
+  </div>
+
+  <script>
+    const supabase = supabase.createClient('YOUR_SUPABASE_URL', 'YOUR_SUPABASE_ANON_KEY');
+    const grid = document.getElementById('grid');
+    const form = document.getElementById('form');
+    const reserveBtn = document.getElementById('reserve');
+    let selectedNumbers = [];
+
+    async function loadNumbers() {
+      const { data, error } = await supabase.from('numbers').select('*').order('number');
+      if (error) console.error('Error loading numbers:', error);
+      else updateGrid(data);
+    }
+
+    function updateGrid(numbers) {
+      grid.innerHTML = '';
+      numbers.forEach(n => {
+        const div = document.createElement('div');
+        div.textContent = n.number;
+        div.className = `number ${n.status}`;
+        if (n.status === 'available') {
+          div.onclick = () => toggleSelection(n.number, div);
+        }
+        grid.appendChild(div);
+      });
+    }
+
+    function toggleSelection(number, element) {
+      const index = selectedNumbers.indexOf(number);
+      if (index > -1) {
+        selectedNumbers.splice(index, 1);
+        element.classList.remove('selected');
+      } else {
+        selectedNumbers.push(number);
+        element.classList.add('selected');
+      }
+      form.style.display = selectedNumbers.length ? 'block' : 'none';
+    }
+
+    reserveBtn.onclick = async () => {
+      const name = document.getElementById('name').value;
+      const email = document.getElementById('email').value;
+      const phone = document.getElementById('phone').value;
+
+      const response = await fetch('/api/reserve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ numbers: selectedNumbers, name, email, phone })
+      });
+
+      if (response.ok) {
+        alert('Numbers reserved successfully!');
+        selectedNumbers = [];
+        loadNumbers();
+      } else {
+        alert('Error reserving numbers');
+      }
+    };
+
+    loadNumbers();
+    supabase.channel('public:numbers').on('postgres_changes', { event: '*', schema: 'public', table: 'numbers' }, loadNumbers).subscribe();
+  </script>
+</body>
+</html>
